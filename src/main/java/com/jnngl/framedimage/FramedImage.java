@@ -31,8 +31,6 @@ import com.jnngl.mapcolor.palette.Palette;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import org.bstats.bukkit.Metrics;
-import org.bstats.charts.SimplePie;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -95,13 +93,6 @@ public final class FramedImage extends JavaPlugin {
 
     Objects.requireNonNull(getCommand("fi")).setExecutor(new FiCommand(this));
     getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
-
-    Metrics metrics = new Metrics(this, 16966);
-    metrics.addCustomChart(new SimplePie("dithering", () -> String.valueOf(Config.IMP.DITHERING)));
-    metrics.addCustomChart(new SimplePie("glow", () -> String.valueOf(Config.IMP.GLOW)));
-    metrics.addCustomChart(new SimplePie("dynamic_frame_spawn", () -> String.valueOf(Config.IMP.DYNAMIC_FRAME_SPAWN.ENABLED)));
-    metrics.addCustomChart(new SimplePie("scheduler", () -> this.scheduler.getClass().getSimpleName()));
-    metrics.addCustomChart(new SimplePie("images_count", () -> String.valueOf(this.displays.values().stream().mapToInt(List::size).sum())));
   }
 
   @Override
