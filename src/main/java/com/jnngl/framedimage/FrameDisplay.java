@@ -17,6 +17,10 @@
 
 package com.jnngl.framedimage;
 
+import com.jnngl.framedimage.config.Config;
+import com.jnngl.framedimage.protocol.Packet;
+import com.jnngl.framedimage.protocol.data.Facing;
+import com.jnngl.framedimage.protocol.data.ItemFrame;
 import com.jnngl.framedimage.protocol.packets.DestroyEntity;
 import com.jnngl.framedimage.protocol.packets.MapData;
 import com.jnngl.framedimage.protocol.packets.SetMetadata;
@@ -25,222 +29,221 @@ import com.jnngl.framedimage.util.SectionUtil;
 import com.jnngl.mapcolor.palette.Palette;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
-import com.jnngl.framedimage.config.Config;
-import com.jnngl.framedimage.protocol.Packet;
-import com.jnngl.framedimage.protocol.data.Facing;
-import com.jnngl.framedimage.protocol.data.ItemFrame;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.util.*;
+import java.nio.channels.Channel;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class FrameDisplay {
 
-  private static final BlockFace[] OFFSET_FACES = new BlockFace[]{
-      BlockFace.WEST, BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH
-  };
+    private static final BlockFace[] OFFSET_FACES = new BlockFace[]{
+            BlockFace.WEST, BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH
+    };
 
-  private static final Facing[] FACINGS = new Facing[]{
-      Facing.NORTH, Facing.EAST, Facing.SOUTH, Facing.WEST
-  };
+    private static final Facing[] FACINGS = new Facing[]{
+            Facing.NORTH, Facing.EAST, Facing.SOUTH, Facing.WEST
+    };
 
-  private static int EID_COUNTER = 0;
-  private static int MAP_COUNTER = -1;
+    private static int EID_COUNTER = 0;
+    private static int MAP_COUNTER = -1;
 
-  private final List<List<Packet>> framePackets;
-  private final List<Packet> spawnPackets = new ArrayList<>();
-  private final List<Packet> destroyPackets = new ArrayList<>();
-  private final Location location;
-  private final BlockFace face;
-  private final BlockFace offsetFace;
-  private final int width;
-  private final int height;
-  private final List<BufferedImage> frames;
-  private final UUID uuid;
-  private Iterator<List<Packet>> framePacketsIterator;
-  private List<Long> sections;
+    private final List<List<Packet>> framePackets;
+    private final List<Packet> spawnPackets = new ArrayList<>();
+    private final List<Packet> destroyPackets = new ArrayList<>();
+    private final Location location;
+    private final BlockFace face;
+    private final BlockFace offsetFace;
+    private final int width;
+    private final int height;
+    private final List<BufferedImage> frames;
+    private final UUID uuid;
+    private final UUID player;
+    private Iterator<List<Packet>> framePacketsIterator;
+    private List<Long> sections;
 
-  private static BufferedImage resizeIfNeeded(BufferedImage image, int width, int height) {
-    if (image.getWidth() != width || image.getHeight() != height) {
-      BufferedImage resized = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+    public FrameDisplay(FramedImage plugin, Location location, BlockFace face,
+                        int width, int height, List<BufferedImage> frames, UUID uuid, UUID player) {
+        frames = frames.stream()
+                .map(image -> resizeIfNeeded(image, width * 128, height * 128))
+                .collect(Collectors.toList());
 
-      Graphics2D graphics = resized.createGraphics();
-      graphics.drawImage(image.getScaledInstance(width, height, Image.SCALE_SMOOTH), 0, 0, null);
-      graphics.dispose();
+        this.location = location;
+        this.face = face;
+        this.width = width;
+        this.height = height;
+        this.player = player;
+        this.frames = frames;
+        this.uuid = uuid;
 
-      return resized;
-    } else {
-      return image;
-    }
-  }
+        framePackets = frames.stream()
+                .map(frame -> new ArrayList<Packet>())
+                .collect(Collectors.toList());
 
-  public FrameDisplay(FramedImage plugin, Location location, BlockFace face,
-                      int width, int height, List<BufferedImage> frames, UUID uuid) {
-    frames = frames.stream()
-        .map(image -> resizeIfNeeded(image, width * 128, height * 128))
-        .collect(Collectors.toList());
+        offsetFace = OFFSET_FACES[face.ordinal()];
+        Facing facing = FACINGS[face.ordinal()];
 
-    this.location = location;
-    this.face = face;
-    this.width = width;
-    this.height = height;
-    this.frames = frames;
-    this.uuid = uuid;
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                int blockX = location.getBlockX() + offsetFace.getModX() * x;
+                int blockY = location.getBlockY() + y;
+                int blockZ = location.getBlockZ() + offsetFace.getModZ() * x;
 
-    framePackets = frames.stream()
-        .map(frame -> new ArrayList<Packet>())
-        .collect(Collectors.toList());
+                int eid = --EID_COUNTER;
 
-    offsetFace = OFFSET_FACES[face.ordinal()];
-    Facing facing = FACINGS[face.ordinal()];
+                spawnPackets.add(new SpawnEntity(eid,
+                        UUID.randomUUID(),
+                        Config.IMP.GLOW ? ItemFrame::getGlowingID : ItemFrame::getID,
+                        blockX, blockY, blockZ,
+                        0, facing.getYaw(), 0,
+                        facing::getID,
+                        0, 0, 0
+                ));
 
-    for (int x = 0; x < width; x++) {
-      for (int y = 0; y < height; y++) {
-        int blockX = location.getBlockX() + offsetFace.getModX() * x;
-        int blockY = location.getBlockY() + y;
-        int blockZ = location.getBlockZ() + offsetFace.getModZ() * x;
+                for (int i = 0; i < frames.size(); i++) {
+                    BufferedImage frame = frames.get(i);
+                    BufferedImage part = frame.getSubimage(x * 128, (height - 1 - y) * 128, 128, 128);
 
-        int eid = --EID_COUNTER;
+                    int mapId = --MAP_COUNTER;
 
-        spawnPackets.add(
-            new SpawnEntity(
-                eid,
-                UUID.randomUUID(),
-                Config.IMP.GLOW
-                    ? ItemFrame::getGlowingID
-                    : ItemFrame::getID,
-                blockX, blockY, blockZ,
-                0, facing.getYaw(), 0,
-                facing::getID,
-                0, 0, 0
-            )
-        );
+                    if (Config.IMP.CACHE_MAPS) {
+                        Map<Palette, byte[]> data = new HashMap<>();
+                        for (Palette palette : Palette.ALL_PALETTES) {
+                            data.put(palette, plugin.getColorMatchers().get(palette).matchImage(part));
+                        }
 
-        for (int i = 0; i < frames.size(); i++) {
-          BufferedImage frame = frames.get(i);
-          BufferedImage part = frame.getSubimage(x * 128, (height - 1 - y) * 128, 128, 128);
+                        spawnPackets.add(new MapData(mapId, (byte) 0, data::get));
+                    } else {
+                        spawnPackets.add(new MapData(
+                                mapId,
+                                (byte) 0,
+                                palette -> plugin.getColorMatchers()
+                                        .get(palette)
+                                        .matchImage(part)
+                        ));
+                    }
 
-          int mapId = --MAP_COUNTER;
+                    framePackets.get(i).add(new SetMetadata(eid, version -> ItemFrame.createMapMetadata(version, mapId)));
+                }
 
-          if (Config.IMP.CACHE_MAPS) {
-            Map<Palette, byte[]> data = new HashMap<>();
-            for (Palette palette : Palette.ALL_PALETTES) {
-              data.put(palette, plugin.getColorMatchers().get(palette).matchImage(part));
+                destroyPackets.add(new DestroyEntity(eid));
             }
-
-            spawnPackets.add(new MapData(mapId, (byte) 0, data::get));
-          } else {
-            spawnPackets.add(
-                new MapData(
-                    mapId,
-                    (byte) 0,
-                    palette ->
-                        plugin
-                            .getColorMatchers()
-                            .get(palette)
-                            .matchImage(part)
-                )
-            );
-          }
-
-          framePackets.get(i).add(new SetMetadata(eid, version -> ItemFrame.createMapMetadata(version, mapId)));
         }
 
-        destroyPackets.add(new DestroyEntity(eid));
-      }
-    }
-
-    framePacketsIterator = framePackets.iterator();
-  }
-
-  public FrameDisplay(FramedImage plugin, Location location, BlockFace face,
-                      int width, int height, List<BufferedImage> frames) {
-    this(plugin, location, face, width, height, frames, UUID.randomUUID());
-  }
-
-  public List<Packet> getNextFramePackets() {
-    synchronized (framePackets) {
-      if (!framePacketsIterator.hasNext()) {
         framePacketsIterator = framePackets.iterator();
-      }
-
-      return framePacketsIterator.next();
-    }
-  }
-
-  public List<Long> getSections() {
-    if (sections != null) {
-      return sections;
     }
 
-    int centerX = location.getBlockX();
-    int centerZ = location.getBlockZ();
-    int radius = (Config.IMP.DYNAMIC_FRAME_SPAWN.GRID_SIZE - 1) / 2;
-    int offset = 1 << Config.IMP.DYNAMIC_FRAME_SPAWN.SECTION_SHIFT;
-
-    sections = new ArrayList<>();
-    for (int x = -radius; x <= radius; x++) {
-      for (int z = -radius; z <= radius; z++) {
-        sections.add(SectionUtil.getSectionIndex(centerX + x * offset, centerZ + z * offset));
-      }
+    public FrameDisplay(FramedImage plugin, Location location, BlockFace face,
+                        int width, int height, List<BufferedImage> frames, UUID player) {
+        this(plugin, location, face, width, height, frames, UUID.randomUUID(), player);
     }
 
-    return sections = Collections.unmodifiableList(sections);
-  }
+    private static BufferedImage resizeIfNeeded(BufferedImage image, int width, int height) {
+        if (image.getWidth() != width || image.getHeight() != height) {
+            BufferedImage resized = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
-  public int getNumFrames() {
-    return frames.size();
-  }
+            Graphics2D graphics = resized.createGraphics();
+            graphics.drawImage(image.getScaledInstance(width, height, Image.SCALE_SMOOTH), 0, 0, null);
+            graphics.dispose();
 
-  public Location getLocation() {
-    return location;
-  }
-
-  public BlockFace getFace() {
-    return face;
-  }
-
-  public BlockFace getOffsetFace() {
-    return offsetFace;
-  }
-
-  public int getWidth() {
-    return width;
-  }
-
-  public int getHeight() {
-    return height;
-  }
-
-  public List<BufferedImage> getFrames() {
-    return frames;
-  }
-
-  public UUID getUUID() {
-    return uuid;
-  }
-
-  public List<Packet> getSpawnPackets() {
-    return spawnPackets;
-  }
-
-  public List<Packet> getDestroyPackets() {
-    return destroyPackets;
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (!(obj instanceof FrameDisplay)) {
-      return false;
+            return resized;
+        } else {
+            return image;
+        }
     }
 
-    return uuid.equals(((FrameDisplay) obj).getUUID());
-  }
+    public List<Packet> getNextFramePackets() {
+        synchronized (framePackets) {
+            if (!framePacketsIterator.hasNext()) {
+                framePacketsIterator = framePackets.iterator();
+            }
 
-  @Override
-  public int hashCode() {
-    return uuid.hashCode();
-  }
+            return framePacketsIterator.next();
+        }
+    }
+
+    public List<Long> getSections() {
+        if (sections != null) {
+            return sections;
+        }
+
+        int centerX = location.getBlockX();
+        int centerZ = location.getBlockZ();
+        int radius = (Config.IMP.DYNAMIC_FRAME_SPAWN.GRID_SIZE - 1) / 2;
+        int offset = 1 << Config.IMP.DYNAMIC_FRAME_SPAWN.SECTION_SHIFT;
+
+        sections = new ArrayList<>();
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                sections.add(SectionUtil.getSectionIndex(centerX + x * offset, centerZ + z * offset));
+            }
+        }
+
+        return sections = Collections.unmodifiableList(sections);
+    }
+
+    public int getNumFrames() {
+        return frames.size();
+    }
+
+    public Location getLocation() {
+        return location;
+    }
+
+    public BlockFace getFace() {
+        return face;
+    }
+
+    public BlockFace getOffsetFace() {
+        return offsetFace;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public List<BufferedImage> getFrames() {
+        return frames;
+    }
+
+    public UUID getPlayer() {
+        return player;
+    }
+
+    public UUID getUUID() {
+        return uuid;
+    }
+
+    public List<Packet> getSpawnPackets() {
+        return spawnPackets;
+    }
+
+    public List<Packet> getDestroyPackets() {
+        return destroyPackets;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof FrameDisplay)) {
+            return false;
+        }
+
+        return uuid.equals(((FrameDisplay) obj).getUUID());
+    }
+
+    @Override
+    public int hashCode() {
+        return uuid.hashCode();
+    }
 }

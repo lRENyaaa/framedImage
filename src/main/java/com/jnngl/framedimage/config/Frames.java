@@ -39,71 +39,70 @@ import java.util.UUID;
 
 public class Frames extends YamlConfig {
 
-  @Ignore
-  public static final Frames IMP = new Frames();
+    @Ignore
+    public static final Frames IMP = new Frames();
 
-  public Map<String, FrameNode> FRAMES = new HashMap<>();
+    public Map<String, FrameNode> FRAMES = new HashMap<>();
 
-  @NodeSequence
-  public static class FrameNode {
+    @NodeSequence
+    public static class FrameNode {
 
-    public String WORLD;
-    public int X;
-    public int Y;
-    public int Z;
-    public int WIDTH;
-    public int HEIGHT;
-    public String FACE;
-    public String IMAGE = ""; // For backward compatibility
-    public List<String> FRAMES;
+        public String WORLD;
+        public int X;
+        public int Y;
+        public int Z;
+        public int WIDTH;
+        public int HEIGHT;
+        public String FACE;
+        public String IMAGE = ""; // For backward compatibility
+        public String PLAYER;
+        public List<String> FRAMES;
 
-    public FrameNode(FrameDisplay display, File dataFolder) throws IOException {
-      Location location = display.getLocation();
-      WORLD = location.getWorld().getName();
-      X = location.getBlockX();
-      Y = location.getBlockY();
-      Z = location.getBlockZ();
-      WIDTH = display.getWidth();
-      HEIGHT = display.getHeight();
-      FACE = display.getFace().toString();
-      FRAMES = new ArrayList<>();
+        public FrameNode(FrameDisplay display, File dataFolder) throws IOException {
+            Location location = display.getLocation();
+            WORLD = location.getWorld().getName();
+            X = location.getBlockX();
+            Y = location.getBlockY();
+            Z = location.getBlockZ();
+            WIDTH = display.getWidth();
+            HEIGHT = display.getHeight();
+            PLAYER = display.getPlayer().toString();
+            FACE = display.getFace().toString();
+            FRAMES = new ArrayList<>();
 
-      for (int i = 0; i < display.getNumFrames(); i++) {
-        Path path = Path.of(dataFolder.getPath(), "images/" + display.getUUID() + "_" + i + ".png");
-        File file = path.toFile();
+            for (int i = 0; i < display.getNumFrames(); i++) {
+                Path path = Path.of(dataFolder.getPath(), "images/" + display.getUUID() + "_" + i + ".png");
+                File file = path.toFile();
 
-        if (Files.notExists(path)) {
-          Files.createDirectories(path.getParent());
-          ImageIO.write(display.getFrames().get(i), "PNG", file);
+                if (Files.notExists(path)) {
+                    Files.createDirectories(path.getParent());
+                    ImageIO.write(display.getFrames().get(i), "PNG", file);
+                }
+
+                FRAMES.add(file.getPath().replace(File.separatorChar, '/'));
+            }
         }
 
-        FRAMES.add(file.getPath().replace(File.separatorChar, '/'));
-      }
-    }
+        public FrameNode() {
 
-    public FrameNode() {
-
-    }
-
-    public FrameDisplay createFrameDisplay(FramedImage plugin, UUID uuid) throws IOException {
-      Location location = new Location(
-          Bukkit.getWorld(WORLD),
-          X, Y, Z
-      );
-
-      BlockFace face = BlockFace.valueOf(FACE);
-
-      List<BufferedImage> frames;
-      if (IMAGE != null && !IMAGE.isBlank()) {
-        frames = Collections.singletonList(ImageIO.read(new File(IMAGE)));
-      } else {
-        frames = new ArrayList<>();
-        for (String frame : FRAMES) {
-          frames.add(ImageIO.read(new File(frame)));
         }
-      }
 
-      return new FrameDisplay(plugin, location, face, WIDTH, HEIGHT, frames, uuid);
+        public FrameDisplay createFrameDisplay(FramedImage plugin, UUID uuid, UUID player) throws IOException {
+            Location location = new Location(Bukkit.getWorld(WORLD), X, Y, Z);
+
+            BlockFace face = BlockFace.valueOf(FACE);
+
+            List<BufferedImage> frames;
+            if (IMAGE != null && !IMAGE.isBlank()) {
+                frames = Collections.singletonList(ImageIO.read(new File(IMAGE)));
+            } else {
+                frames = new ArrayList<>();
+                for (String frame : FRAMES) {
+                    frames.add(ImageIO.read(new File(frame)));
+                }
+            }
+
+            return new FrameDisplay(plugin, location, face, WIDTH, HEIGHT, frames, uuid, player);
+        }
     }
-  }
 }
