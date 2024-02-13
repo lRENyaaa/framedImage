@@ -3,16 +3,3 @@ version: '${project.version}'
 main: com.jnngl.framedimage.FramedImage
 api-version: 1.13
 folia-supported: true
-
-commands:
-  fi: {}
-
-permissions:
-  framedimage.command:
-    default: op
-  framedimage.subcommand.create:
-    default: op
-  framedimage.subcommand.remove:
-    default: op
-  framedimage.subcommand.reload:
-    default: op
