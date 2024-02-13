@@ -1,0 +1,5 @@
+name: FramedImage
+version: '1.8.0-SNAPSHOT'
+main: com.jnngl.framedimage.FramedImage
+api-version: 1.13
+folia-supported: true

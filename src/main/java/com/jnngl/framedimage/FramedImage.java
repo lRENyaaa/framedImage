@@ -18,7 +18,6 @@
 package com.jnngl.framedimage;
 
 import com.jnngl.framedimage.api.FramedImageAPI;
-import com.jnngl.framedimage.command.FiCommand;
 import com.jnngl.framedimage.config.Config;
 import com.jnngl.framedimage.config.Frames;
 import com.jnngl.framedimage.injection.Injector;
@@ -97,8 +96,7 @@ public final class FramedImage extends JavaPlugin {
         getLogger().info("Successfully injected!");
 
         scheduler.runDelayed(this, this::reload);
-
-        Objects.requireNonNull(getCommand("fi")).setExecutor(new FiCommand(this));
+        
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
 
         api = new FramedImageAPI(this);
