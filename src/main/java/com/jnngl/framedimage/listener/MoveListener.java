@@ -1,7 +1,7 @@
 package com.jnngl.framedimage.listener;
 
 import com.jnngl.framedimage.FramedImage;
-import com.jnngl.framedimage.util.SectionUtil;
+import com.jnngl.framedimage.sections.SectionUtil;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;

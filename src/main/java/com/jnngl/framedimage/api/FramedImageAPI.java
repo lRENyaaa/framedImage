@@ -50,6 +50,14 @@ public class FramedImageAPI {
         return display;
     }
 
+    public FrameDisplay move(FrameDisplay display,Location location){
+        plugin.remove(display);
+        FrameDisplay frameDisplay = new FrameDisplay(plugin, location, display.getFace(), display.getWidth(), display.getHeight(), display.getFrames(), display.getUUID(), display.getPlayer());
+        plugin.add(frameDisplay);
+        plugin.saveFrames();
+        return display;
+    }
+
     public void removeMap(FrameDisplay display){
         plugin.remove(display);
     }

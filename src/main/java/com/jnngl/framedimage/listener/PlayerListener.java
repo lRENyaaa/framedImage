@@ -29,44 +29,44 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 
 public class PlayerListener implements Listener {
 
-  private final FramedImage plugin;
+    private final FramedImage plugin;
 
-  public PlayerListener(FramedImage plugin) {
-    this.plugin = plugin;
-  }
-
-  @EventHandler
-  public void onJoin(PlayerJoinEvent event) {
-    plugin.getScheduler().runDelayed(plugin, () -> {
-      Player player = event.getPlayer();
-      plugin.getLoggingPlayers().remove(player.getName());
-      Channel channel = plugin.getPlayerChannel(player);
-
-      if (channel != null) {
-        if (channel.pipeline().get("compress") != null) {
-          ChannelHandler handler = channel.pipeline().get("framedimage:encoder");
-          channel.pipeline().remove(handler);
-          channel.pipeline().addAfter("compress", "framedimage:encoder", handler);
-        }
-
-        plugin.spawn(player);
-      }
-    }, 10L);
-  }
-
-  @EventHandler
-  public void onRespawn(PlayerRespawnEvent event) {
-    Player player = event.getPlayer();
-    plugin.getPlayerDisplays().remove(player.getName());
-    if (player.getLocation().getWorld() == event.getRespawnLocation().getWorld()) {
-      plugin.getScheduler().runDelayed(plugin, () -> plugin.spawn(player), 10L);
+    public PlayerListener(FramedImage plugin) {
+        this.plugin = plugin;
     }
-  }
 
-  @EventHandler
-  public void onChangeDimension(PlayerChangedWorldEvent event) {
-    Player player = event.getPlayer();
-    plugin.getPlayerDisplays().remove(player.getName());
-    plugin.spawn(player);
-  }
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        plugin.getScheduler().runDelayed(plugin, () -> {
+            Player player = event.getPlayer();
+            plugin.getLoggingPlayers().remove(player.getName());
+            Channel channel = plugin.getPlayerChannels().get(player);
+
+            if (channel != null) {
+                if (channel.pipeline().get("compress") != null) {
+                    ChannelHandler handler = channel.pipeline().get("framedimage:encoder");
+                    channel.pipeline().remove(handler);
+                    channel.pipeline().addAfter("compress", "framedimage:encoder", handler);
+                }
+
+                plugin.spawn(player);
+            }
+        }, 10L);
+    }
+
+    @EventHandler
+    public void onRespawn(PlayerRespawnEvent event) {
+        Player player = event.getPlayer();
+        plugin.getPlayerDisplays().remove(player.getName());
+        if (player.getLocation().getWorld() == event.getRespawnLocation().getWorld()) {
+            plugin.getScheduler().runDelayed(plugin, () -> plugin.spawn(player), 10L);
+        }
+    }
+
+    @EventHandler
+    public void onChangeDimension(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        plugin.getPlayerDisplays().remove(player.getName());
+        plugin.spawn(player);
+    }
 }

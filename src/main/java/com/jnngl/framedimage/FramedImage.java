@@ -25,11 +25,12 @@ import com.jnngl.framedimage.listener.HandshakeListener;
 import com.jnngl.framedimage.listener.MoveListener;
 import com.jnngl.framedimage.listener.PlayerListener;
 import com.jnngl.framedimage.protocol.Packet;
+import com.jnngl.framedimage.protocol.PlayerChannels;
 import com.jnngl.framedimage.scheduler.BukkitTaskScheduler;
 import com.jnngl.framedimage.scheduler.CancellableTask;
 import com.jnngl.framedimage.scheduler.FoliaTaskScheduler;
 import com.jnngl.framedimage.scheduler.TaskScheduler;
-import com.jnngl.framedimage.util.SectionUtil;
+import com.jnngl.framedimage.sections.SectionUtil;
 import com.jnngl.mapcolor.ColorMatcher;
 import com.jnngl.mapcolor.matchers.BufferedImageMatcher;
 import com.jnngl.mapcolor.matchers.CachedColorMatcher;
@@ -52,7 +53,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,17 +63,33 @@ public final class FramedImage extends JavaPlugin {
     private final File configFile = new File(getDataFolder(), "config.yml");
     private final File framesFile = new File(getDataFolder(), "frames.yml");
     private final Map<String, Map<Long, List<FrameDisplay>>> sectionDisplays = new ConcurrentHashMap<>();
+
+    // 当前向玩家展示的FrameDisplay
     private final Map<String, Set<FrameDisplay>> playerDisplays = new ConcurrentHashMap<>();
-    private final Map<String, Channel> playerChannels = new ConcurrentHashMap<>();
+
+    // 玩家数据包Channel
+    private final PlayerChannels playerChannels = new PlayerChannels();
+
+    // 全部的FrameDisplay(World,DisplayList)
     private final Map<String, List<FrameDisplay>> displays = new ConcurrentHashMap<>();
+
+    // 不知道啥玩意
     private final Map<Palette, ColorMatcher> colorMatchers = new ConcurrentHashMap<>();
+
+    // 动态的FrameDisplay
     private final Map<FrameDisplay, CancellableTask> updatableDisplays = new ConcurrentHashMap<>();
+
+    // 登录中的玩家
     private final Set<String> loggingPlayers = ConcurrentHashMap.newKeySet();
     private final TaskScheduler scheduler;
     private String encoderContext = null;
     private MoveListener moveListener = null;
+
+    // api
     private static FramedImageAPI api;
 
+
+    // folia
     {
         TaskScheduler scheduler;
         try {
@@ -90,15 +106,19 @@ public final class FramedImage extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // 应该是注入数据包通道
         injector.addInjector(channel -> channel.pipeline().addAfter("splitter", "framedimage:handshake", new HandshakeListener(this)));
 
         injector.inject();
         getLogger().info("Successfully injected!");
 
+        // 加载主要内容
         scheduler.runDelayed(this, this::reload);
-        
+
+        // 注册监听器
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
 
+        // API
         api = new FramedImageAPI(this);
     }
 
@@ -108,19 +128,15 @@ public final class FramedImage extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // 移除全部FrameDisplay
         removeAll();
+
+        // 移除全部通道列表
         playerChannels.clear();
     }
 
-    public Channel getPlayerChannel(String name) {
-        return playerChannels.get(name);
-    }
-
-    public Channel getPlayerChannel(Player player) {
-        return getPlayerChannel(player.getName());
-    }
-
-    public Map<String, Channel> getPlayerChannels() {
+    // 获取玩家通道
+    public PlayerChannels getPlayerChannels() {
         return playerChannels;
     }
 
@@ -137,6 +153,7 @@ public final class FramedImage extends JavaPlugin {
         return sectionMap.getOrDefault(section, Collections.emptyList());
     }
 
+    // 发包,在生成地图画(spawn),显示/填充地图画(display/displayNext),删除地图画(delete)处有用
     public void writePacket(Channel channel, Packet packet) {
         ChannelHandlerContext context = encoderContext != null ? channel.pipeline().context(encoderContext) : null;
 
@@ -157,13 +174,14 @@ public final class FramedImage extends JavaPlugin {
         context.writeAndFlush(packet);
     }
 
+    // 刷新地图画(用于动态地图画)
     public void displayNextFrame(FrameDisplay display) {
         Location location = display.getLocation();
         Collection<Player> players = location.getNearbyPlayers(256);
         List<Packet> packets = display.getNextFramePackets();
         players.forEach(player -> {
             if (!loggingPlayers.contains(player.getName())) {
-                Channel channel = getPlayerChannel(player);
+                Channel channel = playerChannels.get(player);
                 if (channel != null) {
                     packets.forEach(packet -> writePacket(channel, packet));
                 }
@@ -172,7 +190,7 @@ public final class FramedImage extends JavaPlugin {
     }
 
     public void spawn(FrameDisplay display, Player player) {
-        Channel channel = getPlayerChannel(player);
+        Channel channel = playerChannels.get(player);
         if (channel != null) {
             display.getSpawnPackets().forEach(packet -> writePacket(channel, packet));
             display.getNextFramePackets().forEach(packet -> writePacket(channel, packet));
@@ -207,7 +225,7 @@ public final class FramedImage extends JavaPlugin {
     }
 
     public void destroy(FrameDisplay display, Player player) {
-        Channel channel = getPlayerChannel(player);
+        Channel channel = playerChannels.get(player);
         if (channel != null) {
             display.getDestroyPackets().forEach(packet -> writePacket(channel, packet));
         }

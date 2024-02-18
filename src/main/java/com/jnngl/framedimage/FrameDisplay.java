@@ -25,14 +25,13 @@ import com.jnngl.framedimage.protocol.packets.DestroyEntity;
 import com.jnngl.framedimage.protocol.packets.MapData;
 import com.jnngl.framedimage.protocol.packets.SetMetadata;
 import com.jnngl.framedimage.protocol.packets.SpawnEntity;
-import com.jnngl.framedimage.util.SectionUtil;
+import com.jnngl.framedimage.sections.SectionUtil;
 import com.jnngl.mapcolor.palette.Palette;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.nio.channels.Channel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;

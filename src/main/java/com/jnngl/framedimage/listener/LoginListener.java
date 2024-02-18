@@ -46,7 +46,7 @@ public class LoginListener extends ChannelInboundHandlerAdapter {
         MinecraftVersion version = MinecraftVersion.fromPVN(protocol);
 
         plugin.getLoggingPlayers().add(name);
-        plugin.getPlayerChannels().put(name, ctx.channel());
+        plugin.getPlayerChannels().add(name, ctx.channel());
 
         plugin.getLogger().info(name + " has connected with protocol " + protocol + " (" + version.getVersionName() + ")");
 

@@ -1,4 +1,4 @@
-package com.jnngl.framedimage.util;
+package com.jnngl.framedimage.sections;
 
 import com.jnngl.framedimage.config.Config;
 import org.bukkit.Location;
