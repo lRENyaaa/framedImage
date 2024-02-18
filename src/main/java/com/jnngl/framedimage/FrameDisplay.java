@@ -64,7 +64,7 @@ public class FrameDisplay {
     private final int height;
     private final List<BufferedImage> frames;
     private final UUID uuid;
-    private final UUID player;
+    private UUID player;
     private Iterator<List<Packet>> framePacketsIterator;
     private List<Long> sections;
 
@@ -218,6 +218,9 @@ public class FrameDisplay {
 
     public UUID getPlayer() {
         return player;
+    }
+    public void setPlayer(UUID player) {
+        this.player = player;
     }
 
     public UUID getUUID() {

@@ -94,6 +94,15 @@ public class FramedImageAPI {
         plugin.reload();
     }
 
+    public void setMapPlayer(FrameDisplay display, Player player){
+        setMapPlayer(display, player.getUniqueId());
+    }
+
+    public void setMapPlayer(FrameDisplay display, UUID uuid){
+        display.setPlayer(uuid);
+        plugin.saveFrames();
+    }
+
     public FrameDisplay getMap(Player player){
         List<FrameDisplay> displays = plugin.getDisplays().get(player.getWorld().getName());
         if (displays == null) {
