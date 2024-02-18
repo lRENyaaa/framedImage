@@ -8,6 +8,7 @@ import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -91,6 +92,64 @@ public class FramedImageAPI {
 
     public void reload(){
         plugin.reload();
+    }
+
+    public FrameDisplay getMap(Player player){
+        List<FrameDisplay> displays = plugin.getDisplays().get(player.getWorld().getName());
+        if (displays == null) {
+            return null;
+        }
+
+        Vector origin = player.getEyeLocation().toVector();
+        Vector direction = player.getLocation().getDirection();
+
+        FrameDisplay targetDisplay = null;
+        double nearest = Double.MAX_VALUE;
+
+        for (FrameDisplay display : displays) {
+            Location location = display.getLocation();
+            if (location.distanceSquared(player.getLocation()) > 50 * 50) {
+                continue;
+            }
+
+            int width = display.getWidth();
+            int height = display.getHeight();
+            BlockFace offsetFace = display.getOffsetFace();
+
+            Vector offsetVector = switch(offsetFace) {
+                case SOUTH -> new Vector(1, 0, 0);
+                case NORTH -> new Vector(0, 0, 1);
+                case WEST -> new Vector(1, 0, 1);
+                default -> new Vector();
+            };
+
+            Vector point1 = location.toVector().add(offsetVector);
+            Vector point2 = location.toVector().add(
+                    new Vector(
+                            width * offsetFace.getModX() + -0.1 * offsetFace.getModZ(),
+                            height,
+                            width * offsetFace.getModZ() + 0.1 * offsetFace.getModX()
+                    )
+            ).add(offsetVector);
+
+            Vector min = Vector.getMinimum(point1, point2);
+            point2 = Vector.getMaximum(point1, point2);
+            point1 = min;
+
+            point1.subtract(origin).divide(direction);
+            point2.subtract(origin).divide(direction);
+            Vector near = Vector.getMinimum(point1, point2);
+            Vector far = Vector.getMaximum(point1, point2);
+            double nearDistance = Math.max(Math.max(near.getX(), near.getY()), near.getZ());
+            double farDistance = Math.min(Math.min(far.getX(), far.getY()), far.getZ());
+
+            if (nearDistance <= farDistance && nearDistance < nearest) {
+                targetDisplay = display;
+                nearest = nearDistance;
+            }
+        }
+
+        return targetDisplay;
     }
 
 
