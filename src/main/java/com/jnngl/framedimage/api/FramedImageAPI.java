@@ -40,6 +40,13 @@ public class FramedImageAPI {
         return future;
     }
 
+    public void create(FrameDisplay display){
+        plugin.getScheduler().runAsync(plugin, () -> {
+            plugin.add(display);
+            plugin.saveFrames();
+        });
+    }
+
     public void remove(FrameDisplay display){
         plugin.getScheduler().runAsync(plugin, () -> {
             plugin.remove(display);
