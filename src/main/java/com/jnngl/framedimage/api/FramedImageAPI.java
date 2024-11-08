@@ -23,14 +23,14 @@ public class FramedImageAPI {
         this.plugin = plugin;
     }
 
-    public CompletableFuture<FrameDisplay> create(String urlString, Location location, BlockFace blockFace, int width, int height){
+    public CompletableFuture<FrameDisplay> create(String urlString, Location location, BlockFace blockFace, int width, int height, boolean save){
         CompletableFuture<FrameDisplay> future = new CompletableFuture<>();
         plugin.getScheduler().runAsync(plugin, () -> {
             try {
                 List<BufferedImage> frames = ImageUtil.readFrames(urlString);
                 FrameDisplay frameDisplay = new FrameDisplay(plugin, location, blockFace, width, height, frames);
                 plugin.add(frameDisplay);
-                plugin.saveFrames();
+                if (save) plugin.saveFrames();
                 future.complete(frameDisplay);
             } catch(IOException e) {
                 Bukkit.getConsoleSender().sendMessage(ChatColor.RED + e.getClass().getName() + ": " + e.getMessage());
@@ -40,17 +40,17 @@ public class FramedImageAPI {
         return future;
     }
 
-    public void create(FrameDisplay display){
+    public void create(FrameDisplay display, boolean save){
         plugin.getScheduler().runAsync(plugin, () -> {
             plugin.add(display);
-            plugin.saveFrames();
+            if (save) plugin.saveFrames();
         });
     }
 
-    public void remove(FrameDisplay display){
+    public void remove(FrameDisplay display, boolean save){
         plugin.getScheduler().runAsync(plugin, () -> {
             plugin.remove(display);
-            plugin.saveFrames();
+            if (save) plugin.saveFrames();
         });
     }
 
