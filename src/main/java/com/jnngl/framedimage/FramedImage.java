@@ -17,6 +17,7 @@
 
 package com.jnngl.framedimage;
 
+import com.jnngl.framedimage.api.FramedImageAPI;
 import com.jnngl.framedimage.injection.Injector;
 import com.jnngl.framedimage.listener.MoveListener;
 import com.jnngl.framedimage.scheduler.BukkitTaskScheduler;
@@ -66,6 +67,13 @@ public final class FramedImage extends JavaPlugin {
   private final TaskScheduler scheduler;
   private String encoderContext = null;
   private MoveListener moveListener = null;
+  private FiCommand command = null;
+
+  private static FramedImageAPI api;
+
+  public static FramedImageAPI getApi() {
+    return api;
+  }
 
   {
     TaskScheduler scheduler;
@@ -83,6 +91,8 @@ public final class FramedImage extends JavaPlugin {
 
   @Override
   public void onEnable() {
+    api = new FramedImageAPI(this);
+
     injector.addInjector(channel ->
         channel.pipeline().addAfter("splitter", "framedimage:handshake", new HandshakeListener(this)));
 
@@ -91,7 +101,8 @@ public final class FramedImage extends JavaPlugin {
 
     scheduler.runDelayed(this, this::reload);
 
-    Objects.requireNonNull(getCommand("fi")).setExecutor(new FiCommand(this));
+    command = new FiCommand(this);
+    Objects.requireNonNull(getCommand("fi")).setExecutor(command);
     getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
   }
 
@@ -399,5 +410,9 @@ public final class FramedImage extends JavaPlugin {
 
   public TaskScheduler getScheduler() {
     return scheduler;
+  }
+
+  public FiCommand getCommand() {
+    return command;
   }
 }

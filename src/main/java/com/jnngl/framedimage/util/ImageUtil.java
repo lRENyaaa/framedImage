@@ -31,8 +31,11 @@ import java.util.List;
 public class ImageUtil {
 
   public static List<BufferedImage> readFrames(String urlString) throws IOException {
-    URL url = new URL(urlString);
-    String type = URLConnection.guessContentTypeFromName(urlString);
+    return readFrames(new URL(urlString));
+  }
+
+  public static List<BufferedImage> readFrames(URL url) throws IOException {
+    String type = URLConnection.guessContentTypeFromName(url.toString());
 
     if (type == null) {
       return Collections.singletonList(ImageIO.read(url));

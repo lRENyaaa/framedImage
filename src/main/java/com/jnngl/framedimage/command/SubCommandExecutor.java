@@ -43,6 +43,10 @@ public class SubCommandExecutor implements CommandExecutor {
     subcommands.remove(name);
   }
 
+  public List<String> getCommandList(){
+    return new ArrayList<>(subcommands.keySet());
+  }
+
   @Override
   public boolean onCommand(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, String[] args) {
     if (permission != null && !commandSender.hasPermission(permission)) {

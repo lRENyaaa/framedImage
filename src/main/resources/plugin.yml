@@ -10,9 +10,5 @@ commands:
 permissions:
   framedimage.command:
     default: op
-  framedimage.subcommand.create:
-    default: op
-  framedimage.subcommand.remove:
-    default: op
   framedimage.subcommand.reload:
     default: op
