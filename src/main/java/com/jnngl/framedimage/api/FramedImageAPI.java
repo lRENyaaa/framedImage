@@ -29,7 +29,7 @@ public class FramedImageAPI {
             try {
                 List<BufferedImage> frames = ImageUtil.readFrames(urlString);
                 FrameDisplay frameDisplay = new FrameDisplay(plugin, location, blockFace, width, height, frames);
-                plugin.add(frameDisplay);
+                plugin.add(frameDisplay, save);
                 if (save) plugin.saveFrames();
                 future.complete(frameDisplay);
             } catch(IOException e) {
@@ -42,14 +42,14 @@ public class FramedImageAPI {
 
     public void create(FrameDisplay display, boolean save){
         plugin.getScheduler().runAsync(plugin, () -> {
-            plugin.add(display);
+            plugin.add(display, save);
             if (save) plugin.saveFrames();
         });
     }
 
     public void remove(FrameDisplay display, boolean save){
         plugin.getScheduler().runAsync(plugin, () -> {
-            plugin.remove(display);
+            plugin.remove(display, save);
             if (save) plugin.saveFrames();
         });
     }

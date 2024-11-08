@@ -265,7 +265,11 @@ public final class FramedImage extends JavaPlugin {
     });
   }
 
-  public void add(FrameDisplay display) {
+  public void add(FrameDisplay display){
+    add(display, true);
+  }
+
+  public void add(FrameDisplay display, boolean save) {
     World world = display.getLocation().getWorld();
     if (world == null) {
       return;
@@ -292,6 +296,7 @@ public final class FramedImage extends JavaPlugin {
 
     displays.computeIfAbsent(world.getName(), k -> new ArrayList<>()).add(display);
 
+    if (!save) return;
     try {
       synchronized (Frames.class) {
         Frames.IMP.FRAMES.put(display.getUUID().toString(), new Frames.FrameNode(display, getDataFolder()));
@@ -301,7 +306,11 @@ public final class FramedImage extends JavaPlugin {
     }
   }
 
-  public void remove(FrameDisplay display) {
+  public void remove(FrameDisplay display){
+    remove(display, true);
+  }
+
+  public void remove(FrameDisplay display, boolean save) {
     World world = display.getLocation().getWorld();
     if (world == null) {
       return;
@@ -310,6 +319,7 @@ public final class FramedImage extends JavaPlugin {
     destroy(display);
     displays.get(world.getName()).remove(display);
 
+    if (!save) return;
     synchronized (Frames.class) {
       Frames.IMP.FRAMES.remove(display.getUUID().toString());
     }
