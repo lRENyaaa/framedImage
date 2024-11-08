@@ -18,6 +18,7 @@
 package com.jnngl.framedimage.command.fi;
 
 import com.jnngl.framedimage.FramedImage;
+import com.jnngl.framedimage.api.events.FramedImagePluginReloadEvent;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import com.jnngl.framedimage.command.SubCommand;
@@ -39,6 +40,8 @@ public class ReloadSubcommand implements SubCommand {
       commandSender.sendMessage(ChatColor.RED + Messages.IMP.MESSAGES.COMMAND.NOT_ENOUGH_PERMISSIONS);
       return true;
     }
+
+    new FramedImagePluginReloadEvent().callEvent();
 
     plugin.reload();
     commandSender.sendMessage(ChatColor.GOLD + Messages.IMP.MESSAGES.COMMAND.RELOAD.RELOADED);

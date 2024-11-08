@@ -17,9 +17,7 @@
 
 package com.jnngl.framedimage.command.fi;
 
-import com.jnngl.framedimage.FrameDisplay;
 import com.jnngl.framedimage.FramedImage;
-import com.jnngl.framedimage.util.ImageUtil;
 import net.elytrium.java.commons.config.Placeholders;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -31,8 +29,6 @@ import com.jnngl.framedimage.command.SubCommand;
 import com.jnngl.framedimage.config.Messages;
 import com.jnngl.framedimage.util.BlockUtil;
 
-import java.awt.image.BufferedImage;
-import java.io.IOException;
 import java.util.List;
 
 public class CreateSubcommand implements SubCommand {
@@ -79,16 +75,7 @@ public class CreateSubcommand implements SubCommand {
 
     Location location = BlockUtil.getNextBlockLocation(block.getLocation(), blockFace);
 
-    plugin.getScheduler().runAsync(plugin, () -> {
-      try {
-        List<BufferedImage> frames = ImageUtil.readFrames(urlString);
-        FrameDisplay frameDisplay = new FrameDisplay(plugin, location, blockFace, width, height, frames);
-        plugin.add(frameDisplay);
-        plugin.saveFrames();
-      } catch(IOException e) {
-        commandSender.sendMessage(ChatColor.RED + e.getClass().getName() + ": " + e.getMessage());
-      }
-    });
+    FramedImage.getApi().asyncCreate(urlString, location, blockFace, width, height, true, commandSender);
 
     return true;
   }

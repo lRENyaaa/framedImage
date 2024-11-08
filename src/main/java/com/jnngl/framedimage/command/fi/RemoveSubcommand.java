@@ -19,6 +19,7 @@ package com.jnngl.framedimage.command.fi;
 
 import com.jnngl.framedimage.FrameDisplay;
 import com.jnngl.framedimage.FramedImage;
+import com.jnngl.framedimage.api.exception.OperationCancelledException;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
@@ -110,8 +111,11 @@ public class RemoveSubcommand implements SubCommand {
       return true;
     }
 
-    plugin.remove(targetDisplay);
-    plugin.saveFrames();
+    try {
+      FramedImage.getApi().remove(targetDisplay, true);
+    } catch (OperationCancelledException e) {
+      commandSender.sendMessage(ChatColor.RED + e.getExceptionMessage());
+    }
 
     return true;
   }

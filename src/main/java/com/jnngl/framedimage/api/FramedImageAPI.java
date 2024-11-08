@@ -2,12 +2,16 @@ package com.jnngl.framedimage.api;
 
 import com.jnngl.framedimage.FrameDisplay;
 import com.jnngl.framedimage.FramedImage;
+import com.jnngl.framedimage.api.events.FramedImageCreateEvent;
+import com.jnngl.framedimage.api.events.FramedImageRemoveEvent;
+import com.jnngl.framedimage.api.exception.OperationCancelledException;
 import com.jnngl.framedimage.command.SubCommand;
 import com.jnngl.framedimage.util.ImageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
+import org.bukkit.command.CommandSender;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -23,35 +27,57 @@ public class FramedImageAPI {
         this.plugin = plugin;
     }
 
-    public CompletableFuture<FrameDisplay> create(String urlString, Location location, BlockFace blockFace, int width, int height, boolean save){
+    public CompletableFuture<FrameDisplay> asyncCreate(String urlString, Location location, BlockFace blockFace, int width, int height, boolean save){
+        return asyncCreate(urlString, location, blockFace, width, height, save, Bukkit.getConsoleSender());
+    }
+
+    public CompletableFuture<FrameDisplay> asyncCreate(String urlString, Location location, BlockFace blockFace, int width, int height, boolean save, CommandSender sender){
         CompletableFuture<FrameDisplay> future = new CompletableFuture<>();
         plugin.getScheduler().runAsync(plugin, () -> {
             try {
-                List<BufferedImage> frames = ImageUtil.readFrames(urlString);
-                FrameDisplay frameDisplay = new FrameDisplay(plugin, location, blockFace, width, height, frames);
-                plugin.add(frameDisplay, save);
-                if (save) plugin.saveFrames();
+                FrameDisplay frameDisplay = create(urlString, location, blockFace, width, height, save);
                 future.complete(frameDisplay);
             } catch(IOException e) {
-                Bukkit.getConsoleSender().sendMessage(ChatColor.RED + e.getClass().getName() + ": " + e.getMessage());
+                sender.sendMessage(ChatColor.RED + e.getClass().getName() + ": " + e.getMessage());
+                future.complete(null);
+            } catch (OperationCancelledException e) {
+                sender.sendMessage(ChatColor.RED + e.getExceptionMessage());
                 future.complete(null);
             }
         });
         return future;
     }
 
-    public void create(FrameDisplay display, boolean save){
+    public void asyncCreate(FrameDisplay display, boolean save){
         plugin.getScheduler().runAsync(plugin, () -> {
             plugin.add(display, save);
             if (save) plugin.saveFrames();
         });
     }
 
-    public void remove(FrameDisplay display, boolean save){
+    public void asyncRemove(FrameDisplay display, boolean save){
         plugin.getScheduler().runAsync(plugin, () -> {
-            plugin.remove(display, save);
-            if (save) plugin.saveFrames();
+            try {
+                remove(display, save);
+            } catch (OperationCancelledException e) {
+                Bukkit.getConsoleSender().sendMessage(ChatColor.RED + e.getExceptionMessage());
+            }
         });
+    }
+
+    public void remove(FrameDisplay display, boolean save) throws OperationCancelledException {
+        if (new FramedImageRemoveEvent(display).callEvent()) throw new OperationCancelledException("Remove framed image");
+        plugin.remove(display, save);
+        if (save) plugin.saveFrames();
+    }
+
+    public FrameDisplay create(String urlString, Location location, BlockFace blockFace, int width, int height, boolean save) throws IOException, OperationCancelledException {
+        List<BufferedImage> frames = ImageUtil.readFrames(urlString);
+        FrameDisplay frameDisplay = new FrameDisplay(plugin, location, blockFace, width, height, frames);
+        if (new FramedImageCreateEvent(frameDisplay).callEvent()) throw new OperationCancelledException("Create framed image");
+        plugin.add(frameDisplay, save);
+        if (save) plugin.saveFrames();
+        return frameDisplay;
     }
 
     public void registerSubcommand(String name, SubCommand command){
