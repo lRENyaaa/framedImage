@@ -41,9 +41,9 @@ public class ReloadSubcommand implements SubCommand {
       return true;
     }
 
+    plugin.reload();
     new FramedImagePluginReloadEvent().callEvent();
 
-    plugin.reload();
     commandSender.sendMessage(ChatColor.GOLD + Messages.IMP.MESSAGES.COMMAND.RELOAD.RELOADED);
     return true;
   }
